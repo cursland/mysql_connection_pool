@@ -1,6 +1,8 @@
 import mysql.connector.pooling
 import threading
 from typing import Optional, Dict, Any, Tuple, Union, List
+import os
+import sqlparse
 
 
 class MySQLConnectionPool:
@@ -356,3 +358,58 @@ class MySQLConnectionPool:
         if not cls._pool or not cls._instance:
             raise RuntimeError("Pool not initialized. Call __init__ first.")
         return cls._instance
+    
+    @staticmethod
+    def run_sql_file(file_path: str) -> None:
+        """
+        Execute SQL commands from a file.
+        
+        Args:
+            file_path: Path to the SQL file
+            
+        Raises:
+            FileNotFoundError: If the file does not exist
+            mysql.connector.Error: If execution fails
+        """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"SQL file not found: {file_path}")
+        
+        with open(file_path, 'r') as file:
+            sql_script = file.read()
+
+        statements = sqlparse.parse(sql_script)
+        statements = [str(stmt).strip() for stmt in statements if str(stmt).strip()]
+        
+        if not statements:
+            raise ValueError("No valid SQL statements found in the file.")
+
+        db = MySQLConnectionPool.get_instance()
+        for stmt in statements:
+            db.execute_safe(stmt)
+
+    @staticmethod
+    def run_multiple_sql_files(file_paths: List[str]) -> None:
+        """
+        Execute multiple SQL files in order.
+        
+        Args:
+            file_paths: List of paths to SQL files
+        """
+        
+        db = MySQLConnectionPool.get_instance()
+        for file_path in file_paths:
+            db.run_sql_file(file_path)
+
+    @staticmethod
+    def run_multiple_sql_files_from_directory(base_dir: str, file_names: List[str]) -> None:
+        """
+        Execute multiple SQL files from a directory.
+        
+        Args:
+            base_dir: Directory containing SQL files
+            file_names: List of SQL file names to execute
+        """
+        file_paths = [os.path.join(base_dir, name).replace("\\", "/") for name in file_names]
+        
+        db = MySQLConnectionPool.get_instance()
+        db.run_multiple_sql_files(file_paths)

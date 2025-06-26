@@ -1,6 +1,6 @@
 ## 🚀 Instalación
 
-**Paquete:** `mysql-connection-pool 1.0.0`  
+**Paquete:** `mysql-connection-pool 1.0.2`  
 Instala con pip:
 
 ```bash
@@ -26,11 +26,12 @@ db = MySQLConnectionPool(
 ## ⚡ Características Principales
 - Pool de conexiones MySQL thread-safe
 - Cambio dinámico de base de datos (`switch_database`)
-- Métodos de consulta: `fetchall`, `fetchone`, `execute_safe`, `commit_execute`
+- Métodos de consulta: `fetchall`, `fetchone`, `execute_safe`, `commit_execute`, `execute`
 - Ejecución segura y limpieza automática de recursos
 - Métodos utilitarios: `get_current_database`, `is_initialized`, `get_instance`
 - Soporte para transacciones manuales
 - Validación de nombres de base de datos
+- Ejecución de archivos SQL (`run_sql_file`, `run_multiple_sql_files`, `run_multiple_sql_files_from_directory`)
 
 ## 📋 Ejemplos por Método
 
@@ -56,8 +57,9 @@ usuario = db.fetchone(
 if usuario:
     print(f"👤 Usuario encontrado: {usuario['nombre']}")
 
-total = db.fetchone("SELECT COUNT(*) AS total FROM pedidos")["total"]
-print(f"🛒 Total pedidos: {total}")
+total = db.fetchone("SELECT COUNT(*) AS total FROM pedidos")
+if total:
+    print(f"🛒 Total pedidos: {total['total']}")
 ```
 
 ### 3. `commit_execute()` - Escritura de datos
@@ -78,7 +80,7 @@ print(f"♻️ {filas_afectadas} productos actualizados")
 ### 4. `execute_safe()` y `execute()` - Uso genérico
 ```python
 # Consulta con procesamiento
-segurocursor, resultados = db.execute_safe("""
+resultados = db.execute_safe("""
     SELECT p.nombre, COUNT(*) as ventas
     FROM productos p
     JOIN pedidos_detalle pd ON p.id = pd.producto_id
@@ -89,7 +91,7 @@ if resultados:
         print(f"📊 {prod['nombre']}: {prod['ventas']} ventas")
 
 # Llamada a procedimiento almacenado
-cursor, _ = db.execute_safe("CALL limpiar_registros_antiguos(%s)", (30,))
+db.execute_safe("CALL limpiar_registros_antiguos(%s)", (30,))
 
 # Uso avanzado de execute (requiere cerrar conexión manualmente)
 cursor, conn = db.execute("SELECT * FROM usuarios WHERE id = %s", (1,))
@@ -104,6 +106,24 @@ finally:
 # Cambiar la base de datos activa
 db.switch_database("nueva_base")
 print("Base de datos actual:", db.get_current_database())
+```
+
+### 6. Ejecutar archivos SQL
+```python
+# Ejecutar un archivo SQL
+db.run_sql_file("scripts/estructura.sql")
+
+# Ejecutar varios archivos SQL
+db.run_multiple_sql_files([
+    "scripts/estructura.sql",
+    "scripts/datos.sql"
+])
+
+# Ejecutar archivos desde un directorio
+db.run_multiple_sql_files_from_directory(
+    "scripts",
+    ["estructura.sql", "datos.sql"]
+)
 ```
 
 ## 🏗️ Escenarios Avanzados
@@ -188,6 +208,9 @@ print("📤 Datos exportados a JSON")
 - `get_current_database()`: Devuelve el nombre de la base de datos actual
 - `is_initialized()`: Indica si el pool fue inicializado
 - `get_instance()`: Devuelve la instancia singleton del pool
+- `run_sql_file(path)`: Ejecuta un archivo SQL
+- `run_multiple_sql_files(lista)`: Ejecuta varios archivos SQL
+- `run_multiple_sql_files_from_directory(dir, lista)`: Ejecuta varios archivos SQL desde un directorio
 
 ## 📝 Notas Importantes
 1. Siempre usa parámetros para prevenir SQL injection:
@@ -201,3 +224,4 @@ print("📤 Datos exportados a JSON")
 3. Las conexiones obtenidas con `_get_connection()` DEBEN cerrarse manualmente.
 4. Para operaciones batch, usa un ciclo o `executemany` manualmente.
 5. Si usas `execute`, recuerda cerrar la conexión devuelta.
+6. Para ejecutar archivos SQL, usa los métodos `run_sql_file`, `run_multiple_sql_files` o `run_multiple_sql_files_from_directory`.
