@@ -14,15 +14,24 @@ db = MySQLConnectionPool(
 )
 ```
 
+## ⚡ Características Principales
+- Pool de conexiones MySQL thread-safe
+- Cambio dinámico de base de datos (`switch_database`)
+- Métodos de consulta: `fetchall`, `fetchone`, `execute_safe`, `commit_execute`
+- Ejecución segura y limpieza automática de recursos
+- Métodos utilitarios: `get_current_database`, `is_initialized`, `get_instance`
+- Soporte para transacciones manuales
+- Validación de nombres de base de datos
+
 ## 📋 Ejemplos por Método
 
 ### 1. `fetchall()` - Consultas de lectura
 ```python
-# Ejemplo 1: Obtener todos los productos
+# Obtener todos los productos
 productos = db.fetchall("SELECT id, nombre, precio FROM productos")
 print(f"📦 Productos: {len(productos)} encontrados")
 
-# Ejemplo 2: Consulta con parámetros
+# Consulta con parámetros
 productos_activos = db.fetchall(
     "SELECT * FROM productos WHERE activo = %s AND precio > %s",
     (True, 50.0)
@@ -31,7 +40,6 @@ productos_activos = db.fetchall(
 
 ### 2. `fetchone()` - Un solo registro
 ```python
-# Ejemplo 1: Buscar usuario por email
 usuario = db.fetchone(
     "SELECT * FROM usuarios WHERE email = %s",
     ("maria@example.com",)
@@ -39,21 +47,18 @@ usuario = db.fetchone(
 if usuario:
     print(f"👤 Usuario encontrado: {usuario['nombre']}")
 
-# Ejemplo 2: Contar registros
 total = db.fetchone("SELECT COUNT(*) AS total FROM pedidos")["total"]
 print(f"🛒 Total pedidos: {total}")
 ```
 
 ### 3. `commit_execute()` - Escritura de datos
 ```python
-# Ejemplo 1: Insert simple
 _, nuevo_id = db.commit_execute(
     "INSERT INTO productos (nombre, precio) VALUES (%s, %s)",
     ("Teclado Mecánico", 89.99)
 )
 print(f"🆕 ID del nuevo producto: {nuevo_id}")
 
-# Ejemplo 2: Actualización masiva
 filas_afectadas, _ = db.commit_execute(
     "UPDATE productos SET precio = precio * 0.9 WHERE categoria = %s",
     ("Electrónicos",)
@@ -61,22 +66,34 @@ filas_afectadas, _ = db.commit_execute(
 print(f"♻️ {filas_afectadas} productos actualizados")
 ```
 
-### 4. `execute_safe()` - Uso genérico
+### 4. `execute_safe()` y `execute()` - Uso genérico
 ```python
-# Ejemplo 1: Consulta con procesamiento
-cursor, resultados = db.execute_safe("""
+# Consulta con procesamiento segurocursor, resultados = db.execute_safe("""
     SELECT p.nombre, COUNT(*) as ventas
     FROM productos p
     JOIN pedidos_detalle pd ON p.id = pd.producto_id
     GROUP BY p.id
 """)
-
 if resultados:
     for prod in resultados:
         print(f"📊 {prod['nombre']}: {prod['ventas']} ventas")
 
-# Ejemplo 2: Llamada a procedimiento
+# Llamada a procedimiento almacenado
 cursor, _ = db.execute_safe("CALL limpiar_registros_antiguos(%s)", (30,))
+
+# Uso avanzado de execute (requiere cerrar conexión manualmente)
+cursor, conn = db.execute("SELECT * FROM usuarios WHERE id = %s", (1,))
+try:
+    user = cursor.fetchone()
+finally:
+    conn.close()
+```
+
+### 5. Cambio de Base de Datos
+```python
+# Cambiar la base de datos activa
+db.switch_database("nueva_base")
+print("Base de datos actual:", db.get_current_database())
 ```
 
 ## 🏗️ Escenarios Avanzados
@@ -86,33 +103,9 @@ cursor, _ = db.execute_safe("CALL limpiar_registros_antiguos(%s)", (30,))
 conn = db._get_connection()
 try:
     conn.start_transaction()
-    
     cursor = conn.cursor(dictionary=True)
-    
-    # Paso 1: Reservar inventario
-    cursor.execute(
-        "UPDATE inventario SET cantidad = cantidad - %s WHERE producto_id = %s",
-        (2, 101)
-    )
-    
-    # Paso 2: Crear pedido
-    cursor.execute(
-        "INSERT INTO pedidos (usuario_id, total) VALUES (%s, %s)",
-        (15, 199.98)
-    )
-    pedido_id = cursor.lastrowid
-    
-    # Paso 3: Detalles del pedido
-    cursor.executemany(
-        "INSERT INTO pedidos_detalle (pedido_id, producto_id, cantidad) VALUES (%s, %s, %s)",
-        [(pedido_id, 101, 2)]
-    )
-    
+    # ... operaciones ...
     conn.commit()
-    print(f"✅ Pedido {pedido_id} creado correctamente")
-except Exception as e:
-    conn.rollback()
-    print(f"❌ Error en transacción: {e}")
 finally:
     conn.close()
 ```
@@ -126,7 +119,6 @@ def obtener_productos_paginados(pagina: int, por_pagina: int = 10):
         (por_pagina, offset)
     )
 
-# Uso:
 pagina_2 = obtener_productos_paginados(2)
 print(f"📄 Página 2: {len(pagina_2)} productos")
 ```
@@ -139,11 +131,12 @@ datos_productos = [
     for i in range(1, 1001)
 ]
 
-db.commit_execute(
-    "INSERT INTO productos (nombre, categoria, precio) VALUES (%s, %s, %s)",
-    datos_productos,
-    many=True
-)
+# Para operaciones batch, usar un ciclo o executemany manualmente
+for datos in datos_productos:
+    db.commit_execute(
+        "INSERT INTO productos (nombre, categoria, precio) VALUES (%s, %s, %s)",
+        datos
+    )
 print("⚡ Carga masiva completada")
 ```
 
@@ -161,7 +154,6 @@ def get_db_connection():
     finally:
         conn.close()
 
-# Uso:
 with get_db_connection() as connection:
     cursor = connection.cursor(dictionary=True)
     cursor.execute("SELECT NOW() AS hora_actual")
@@ -181,16 +173,21 @@ exportar_a_json("productos", "backup_productos.json")
 print("📤 Datos exportados a JSON")
 ```
 
+## 🔄 Métodos Utilitarios
+- `switch_database(nombre)`: Cambia la base de datos activa (valida el nombre)
+- `get_current_database()`: Devuelve el nombre de la base de datos actual
+- `is_initialized()`: Indica si el pool fue inicializado
+- `get_instance()`: Devuelve la instancia singleton del pool
+
 ## 📝 Notas Importantes
 1. Siempre usa parámetros para prevenir SQL injection:
    ```python
    # ❌ Mal
    db.fetchall(f"SELECT * FROM usuarios WHERE id = {user_input}")
-   
    # ✅ Bien
    db.fetchall("SELECT * FROM usuarios WHERE id = %s", (user_input,))
    ```
-
-2. Para operaciones batch, usa `many=True` en `commit_execute()`.
-
+2. El método `switch_database` valida el nombre de la base de datos (solo letras, números y guiones bajos).
 3. Las conexiones obtenidas con `_get_connection()` DEBEN cerrarse manualmente.
+4. Para operaciones batch, usa un ciclo o `executemany` manualmente.
+5. Si usas `execute`, recuerda cerrar la conexión devuelta.
