@@ -1,3 +1,8 @@
+# This is a template .gitignore file for Python projects.
+
+# Visual Studio Code settings
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -192,3 +197,39 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Ignorar archivos y carpetas temporales en cualquier subcarpeta
+**/__pycache__/
+**/*.py[cod]
+**/*.so
+**/*.egg-info/
+**/*.egg
+**/build/
+**/dist/
+**/.eggs/
+**/.tox/
+**/.nox/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.pytype/
+**/.pyre/
+**/.ipynb_checkpoints/
+**/.env
+**/.venv
+**/env/
+**/venv/
+**/ENV/
+**/env.bak/
+**/venv.bak/
+**/.pdm.toml
+**/.pdm-python
+**/.pdm-build/
+**/.ropeproject/
+**/.spyderproject
+**/.spyproject
+**/.vscode/
+**/.idea/
+**/.abstra/
+**/.ruff_cache/
+**/.cursorignore
+**/.cursorindexingignore
