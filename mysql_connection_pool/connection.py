@@ -142,12 +142,21 @@ class MySQLConnectionPool:
                 raise
         return conn
 
+    def _normalize_params(self, params):
+        """Helper to normalize query parameters for cursor.execute."""
+        if params is None:
+            return None
+        if isinstance(params, (tuple, list, dict)):
+            return params
+        # Single value, wrap in tuple
+        return (params,)
+
     def execute(
         self, 
         query: str, 
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None
-    ) -> Tuple[mysql.connector.cursor.MySQLCursor, mysql.connector.connection.MySQLConnection]:
+    ) -> Tuple['mysql.connector.cursor.MySQLCursor', 'mysql.connector.connection.MySQLConnection']:
         """
         Execute SQL query and return cursor and connection.
         
@@ -173,7 +182,11 @@ class MySQLConnectionPool:
             with conn.cursor() as cursor:
                 cursor.execute(f"USE `{database}`")
         cursor = conn.cursor(dictionary=self._dictionary)
-        cursor.execute(query, params or ())
+        norm_params = self._normalize_params(params)
+        if norm_params is not None:
+            cursor.execute(query, norm_params)
+        else:
+            cursor.execute(query)
         return cursor, conn
 
     def execute_safe(
@@ -181,7 +194,7 @@ class MySQLConnectionPool:
         query: str,
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None
-    ) -> Tuple[mysql.connector.cursor.MySQLCursor, Optional[List[Dict]]]:
+    ) -> Optional[List[Dict]]:
         """
         Execute query and automatically close resources.
         
@@ -202,7 +215,11 @@ class MySQLConnectionPool:
                 with conn.cursor() as cursor:
                     cursor.execute(f"USE `{database}`")
             with conn.cursor(dictionary=self._dictionary) as cursor:
-                cursor.execute(query, params or ())
+                norm_params = self._normalize_params(params)
+                if norm_params is not None:
+                    cursor.execute(query, norm_params)
+                else:
+                    cursor.execute(query)
                 results = cursor.fetchall() if cursor.with_rows else None
                 return results
         finally:
@@ -234,7 +251,11 @@ class MySQLConnectionPool:
                 with conn.cursor() as cursor:
                     cursor.execute(f"USE `{database}`")
             with conn.cursor(dictionary=self._dictionary) as cursor:
-                cursor.execute(query, params or ())
+                norm_params = self._normalize_params(params)
+                if norm_params is not None:
+                    cursor.execute(query, norm_params)
+                else:
+                    cursor.execute(query)
                 return cursor.fetchone()
         finally:
             conn.close()
@@ -265,7 +286,11 @@ class MySQLConnectionPool:
                 with conn.cursor() as cursor:
                     cursor.execute(f"USE `{database}`")
             with conn.cursor(dictionary=self._dictionary) as cursor:
-                cursor.execute(query, params or ())
+                norm_params = self._normalize_params(params)
+                if norm_params is not None:
+                    cursor.execute(query, norm_params)
+                else:
+                    cursor.execute(query)
                 return cursor.fetchall()
         finally:
             conn.close()
@@ -300,7 +325,11 @@ class MySQLConnectionPool:
                 with conn.cursor() as cursor:
                     cursor.execute(f"USE `{database}`")
             with conn.cursor(dictionary=self._dictionary) as cursor:
-                cursor.execute(query, params or ())
+                norm_params = self._normalize_params(params)
+                if norm_params is not None:
+                    cursor.execute(query, norm_params)
+                else:
+                    cursor.execute(query)
                 conn.commit()
                 return cursor.rowcount, cursor.lastrowid
         finally:
