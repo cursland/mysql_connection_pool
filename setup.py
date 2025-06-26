@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="mysql-connection-pool",
-    version="1.0.2",
+    version="1.0.3",
     author="Cursland",
     author_email="",
     description="Una clase para manejar conexiones a MySQL con un pool de conexiones y soporte para múltiples hilos.",

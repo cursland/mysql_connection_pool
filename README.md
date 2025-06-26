@@ -1,6 +1,6 @@
 ## 🚀 Instalación
 
-**Paquete:** `mysql-connection-pool 1.0.2`  
+**Paquete:** `mysql-connection-pool`  
 Instala con pip:
 
 ```bash
