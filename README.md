@@ -77,7 +77,8 @@ print(f"♻️ {filas_afectadas} productos actualizados")
 
 ### 4. `execute_safe()` y `execute()` - Uso genérico
 ```python
-# Consulta con procesamiento segurocursor, resultados = db.execute_safe("""
+# Consulta con procesamiento
+segurocursor, resultados = db.execute_safe("""
     SELECT p.nombre, COUNT(*) as ventas
     FROM productos p
     JOIN pedidos_detalle pd ON p.id = pd.producto_id
