@@ -1,4 +1,13 @@
-# 🎯 MySQLConnectionPool
+## 🚀 Instalación
+
+**Paquete:** `mysql-connection-pool 1.0.0`  
+Instala con pip:
+
+```bash
+pip install mysql-connection-pool
+```
+
+[Project en PyPI](https://pypi.org/project/mysql-connection-pool/)
 
 ## 🔌 Conexión Básica
 ```python
