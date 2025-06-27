@@ -437,7 +437,7 @@ class MySQLConnectionPool:
         query: str, 
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None,
-        enable_logging: bool = False
+        enable_logging: bool = True
     ) -> Tuple['mysql.connector.cursor.MySQLCursor', 'mysql.connector.connection.MySQLConnection']:
         """
         Execute SQL query and return cursor and connection.
@@ -503,7 +503,7 @@ class MySQLConnectionPool:
         query: str,
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None,
-        enable_logging: bool = False
+        enable_logging: bool = True
     ) -> Optional[List[Dict]]:
         """
         Execute query and automatically close resources.
@@ -565,7 +565,7 @@ class MySQLConnectionPool:
         query: str,
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None,
-        enable_logging: bool = False
+        enable_logging: bool = True
     ) -> Optional[Dict[str, Any]]:
         """
         Execute query and return a single row.
@@ -627,7 +627,7 @@ class MySQLConnectionPool:
         query: str,
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None,
-        enable_logging: bool = False
+        enable_logging: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Execute query and return all rows.
@@ -689,7 +689,7 @@ class MySQLConnectionPool:
         query: str,
         params: Optional[Union[Tuple, Dict]] = None,
         database: Optional[str] = None,
-        enable_logging: bool = False
+        enable_logging: bool = True
     ) -> Tuple[int, Optional[int]]:
         """
         Execute write query and commit.
