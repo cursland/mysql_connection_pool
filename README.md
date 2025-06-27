@@ -1,227 +1,234 @@
-## 🚀 Instalación
+# 🐬✨ MySQL Connection Pool - Gestor de conexiones para MySQL ✨🐬
 
-**Paquete:** `mysql-connection-pool`  
-Instala con pip:
+Este módulo proporciona una clase `MySQLConnectionPool` que gestiona un pool de conexiones a MySQL de forma segura para hilos, con capacidades avanzadas de logging y manejo de transacciones.
+
+## 🚀 Características principales
+
+- ✅ **Pool de conexiones thread-safe**  
+- 🔄 **Reconexión automática**  
+- 📝 **Logging detallado con soporte multilingüe (español/inglés)**  
+- 🔄 **Cambio de base de datos dinámico**  
+- 📂 **Ejecución de archivos SQL con parsing avanzado**  
+- 🔒 **Manejo seguro de recursos (cierre automático de conexiones)**  
+- 📊 **Múltiples métodos de ejecución según necesidades**  
+
+## 📦 Instalación
 
 ```bash
 pip install mysql-connection-pool
 ```
 
-[Project en PyPI](https://pypi.org/project/mysql-connection-pool/)
+## 🛠️ Uso básico
 
-## 🔌 Conexión Básica
+### ⚙️ Inicialización
+
 ```python
 from mysql_connection_pool import MySQLConnectionPool
 
-# Configuración mínima
+# Configuración inicial
 db = MySQLConnectionPool(
-    host="localhost",
-    user="admin",
-    password="segura123",
-    database="ecommerce",
-    pool_size=5
+    host='localhost',
+    user='tu_usuario',
+    password='tu_contraseña',
+    database='base_inicial',
+    pool_size=5,
+    logs='logs/mysql.log',  # Ruta relativa o absoluta
+    log_language='es',      # 'es' o 'en'
+    clear_logs=True         # Limpiar archivo de log al iniciar
 )
 ```
 
-## ⚡ Características Principales
-- Pool de conexiones MySQL thread-safe
-- Cambio dinámico de base de datos (`switch_database`)
-- Métodos de consulta: `fetchall`, `fetchone`, `execute_safe`, `commit_execute`, `execute`
-- Ejecución segura y limpieza automática de recursos
-- Métodos utilitarios: `get_current_database`, `is_initialized`, `get_instance`
-- Soporte para transacciones manuales
-- Validación de nombres de base de datos
-- Ejecución de archivos SQL (`run_sql_file`, `run_multiple_sql_files`, `run_multiple_sql_files_from_directory`)
+### 🔍 Ejecución de consultas
 
-## 📋 Ejemplos por Método
-
-### 1. `fetchall()` - Consultas de lectura
 ```python
-# Obtener todos los productos
-productos = db.fetchall("SELECT id, nombre, precio FROM productos")
-print(f"📦 Productos: {len(productos)} encontrados")
+# 👥 Consulta SELECT simple
+usuarios = db.fetchall("SELECT * FROM usuarios")
 
-# Consulta con parámetros
-productos_activos = db.fetchall(
-    "SELECT * FROM productos WHERE activo = %s AND precio > %s",
-    (True, 50.0)
-)
-```
+# 🔎 Consulta con parámetros
+usuario = db.fetchone("SELECT * FROM usuarios WHERE id = %s", (1,))
 
-### 2. `fetchone()` - Un solo registro
-```python
-usuario = db.fetchone(
-    "SELECT * FROM usuarios WHERE email = %s",
-    ("maria@example.com",)
-)
-if usuario:
-    print(f"👤 Usuario encontrado: {usuario['nombre']}")
-
-total = db.fetchone("SELECT COUNT(*) AS total FROM pedidos")
-if total:
-    print(f"🛒 Total pedidos: {total['total']}")
-```
-
-### 3. `commit_execute()` - Escritura de datos
-```python
-_, nuevo_id = db.commit_execute(
+# 📝 Inserción con commit automático
+filas_afectadas, ultimo_id = db.commit_execute(
     "INSERT INTO productos (nombre, precio) VALUES (%s, %s)",
-    ("Teclado Mecánico", 89.99)
+    ("Laptop", 999.99)
 )
-print(f"🆕 ID del nuevo producto: {nuevo_id}")
 
-filas_afectadas, _ = db.commit_execute(
-    "UPDATE productos SET precio = precio * 0.9 WHERE categoria = %s",
-    ("Electrónicos",)
-)
-print(f"♻️ {filas_afectadas} productos actualizados")
+# 🔄 Cambiar de base de datos
+db.switch_database('otra_base_datos')
 ```
 
-### 4. `execute_safe()` y `execute()` - Uso genérico
+## 🧩 Métodos principales
+
+### 1️⃣ `execute(query, params=None, database=None, enable_logging=False)`
+Ejecuta una consulta y devuelve cursor y conexión (debes cerrarla manualmente).
+
 ```python
-# Consulta con procesamiento
-resultados = db.execute_safe("""
-    SELECT p.nombre, COUNT(*) as ventas
-    FROM productos p
-    JOIN pedidos_detalle pd ON p.id = pd.producto_id
-    GROUP BY p.id
-""")
-if resultados:
-    for prod in resultados:
-        print(f"📊 {prod['nombre']}: {prod['ventas']} ventas")
-
-# Llamada a procedimiento almacenado
-db.execute_safe("CALL limpiar_registros_antiguos(%s)", (30,))
-
-# Uso avanzado de execute (requiere cerrar conexión manualmente)
-cursor, conn = db.execute("SELECT * FROM usuarios WHERE id = %s", (1,))
+cursor, conn = db.execute("SELECT * FROM tabla")
 try:
-    user = cursor.fetchone()
+    resultados = cursor.fetchall()
 finally:
-    conn.close()
+    conn.close()  # ¡Importante cerrar la conexión! 🔒
 ```
 
-### 5. Cambio de Base de Datos
+### 2️⃣ `execute_safe(query, params=None, database=None, enable_logging=False)`
+Ejecuta una consulta y cierra los recursos automáticamente.
+
 ```python
-# Cambiar la base de datos activa
-db.switch_database("nueva_base")
-print("Base de datos actual:", db.get_current_database())
+resultados = db.execute_safe("SELECT * FROM productos WHERE precio > %s", (100,))
 ```
 
-### 6. Ejecutar archivos SQL
-```python
-# Ejecutar un archivo SQL
-db.run_sql_file("scripts/estructura.sql")
+### 3️⃣ `fetchone(query, params=None, database=None, enable_logging=False)`
+Obtiene una sola fila.
 
-# Ejecutar varios archivos SQL
-db.run_multiple_sql_files([
-    "scripts/estructura.sql",
-    "scripts/datos.sql"
+```python
+usuario = db.fetchone("SELECT * FROM usuarios WHERE email = %s", ("user@example.com",))
+```
+
+### 4️⃣ `fetchall(query, params=None, database=None, enable_logging=False)`
+Obtiene todas las filas.
+
+```python
+productos = db.fetchall("SELECT * FROM productos")
+```
+
+### 5️⃣ `commit_execute(query, params=None, database=None, enable_logging=False)`
+Ejecuta una consulta de escritura (INSERT/UPDATE/DELETE) con commit automático.
+
+```python
+filas, id_insertado = db.commit_execute(
+    "INSERT INTO ventas (producto_id, cantidad) VALUES (%s, %s)",
+    (5, 2)
+)
+```
+
+### 6️⃣ `switch_database(database)`
+Cambia a otra base de datos.
+
+```python
+db.switch_database('base_de_datos_nueva')
+```
+
+### 7️⃣ Métodos con logging automático
+Versiones con `_logged` que activan logging por defecto:
+
+```python
+db.execute_logged(...)
+db.fetchone_logged(...)
+# etc...
+```
+
+## 📂 Ejecución de archivos SQL
+
+### 📄 Ejecutar un archivo SQL
+
+```python
+MySQLConnectionPool.run_sql_file('ruta/archivo.sql')
+```
+
+### 📚 Ejecutar múltiples archivos
+
+```python
+MySQLConnectionPool.run_multiple_sql_files([
+    'ruta/archivo1.sql',
+    'ruta/archivo2.sql'
 ])
+```
 
-# Ejecutar archivos desde un directorio
-db.run_multiple_sql_files_from_directory(
-    "scripts",
-    ["estructura.sql", "datos.sql"]
+### 🗂️ Ejecutar archivos desde un directorio
+
+```python
+MySQLConnectionPool.run_multiple_sql_files_from_directory(
+    'ruta/directorio',
+    ['script1.sql', 'script2.sql']
 )
 ```
 
-## 🏗️ Escenarios Avanzados
+## 🏆 Ejemplo completo
 
-### 1. Transacciones Complejas
 ```python
-conn = db._get_connection()
+from mysql_connection_pool import MySQLConnectionPool
+import os
+
+# Configuración inicial
+db = MySQLConnectionPool(
+    host='localhost',
+    user='root',
+    password='password123',
+    database='mi_negocio',
+    pool_size=5,
+    logs=os.path.join('logs', 'mysql.log'),
+    log_language='es',
+    clear_logs=True
+)
+
 try:
-    conn.start_transaction()
-    cursor = conn.cursor(dictionary=True)
-    # ... operaciones ...
-    conn.commit()
-finally:
-    conn.close()
-```
-
-### 2. Paginación de Resultados
-```python
-def obtener_productos_paginados(pagina: int, por_pagina: int = 10):
-    offset = (pagina - 1) * por_pagina
-    return db.fetchall(
-        "SELECT * FROM productos LIMIT %s OFFSET %s",
-        (por_pagina, offset)
+    # 1️⃣ Crear tabla si no existe
+    db.commit_execute_logged("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # 2️⃣ Insertar datos
+    filas_afectadas, ultimo_id = db.commit_execute_logged(
+        "INSERT INTO clientes (nombre, email) VALUES (%s, %s)",
+        ("Juan Pérez", "juan@example.com")
     )
-
-pagina_2 = obtener_productos_paginados(2)
-print(f"📄 Página 2: {len(pagina_2)} productos")
+    print(f"ID insertado: {ultimo_id} 🎉")
+    
+    # 3️⃣ Consultar datos
+    clientes = db.fetchall_logged("SELECT * FROM clientes")
+    print("Clientes:", clientes)
+    
+    # 4️⃣ Cambiar de base de datos y ejecutar script SQL
+    db.switch_database('otra_base')
+    MySQLConnectionPool.run_sql_file('scripts/migracion.sql')
+    
+except Exception as e:
+    print("❌ Error:", e)
 ```
 
-### 3. Carga Masiva Eficiente
-```python
-# Generar 1000 productos de prueba
-datos_productos = [
-    (f"Producto {i}", f"categoria-{i%5}", 10 + i*0.5) 
-    for i in range(1, 1001)
-]
+## 📝 Sistema de Logging
 
-# Para operaciones batch, usar un ciclo o executemany manualmente
-for datos in datos_productos:
-    db.commit_execute(
-        "INSERT INTO productos (nombre, categoria, precio) VALUES (%s, %s, %s)",
-        datos
-    )
-print("⚡ Carga masiva completada")
+El sistema de logging registra:
+- ✅ Ejecución exitosa de consultas
+- ❌ Errores con detalles completos
+- 📝 Cambios de base de datos
+- 📂 Ejecución de archivos SQL
+
+Ejemplo de entrada de log:
+```
+══════════════════════════════[2023-07-20 14:30:45] RUN_SQL_FILE══════════════════════════════
+
+Action: Procesando archivo SQL: migracion.sql
+
+Ejecutando sentencias SQL: 3
+
+══════════════════════════════════════════════════════════════════════════════════════════════
 ```
 
-## 🛠️ Patrones Útiles
+## 🧠 Manejo avanzado de SQL
 
-### 1. Conexión con Context Manager (Python 3.8+)
-```python
-from contextlib import contextmanager
+El parser soporta:
+- 🔄 Sentencias con DELIMITER para procedimientos almacenados
+- 📝 Comentarios (-- y /* */)
+- 📜 Multiples sentencias en un archivo
 
-@contextmanager
-def get_db_connection():
-    conn = db._get_connection()
-    try:
-        yield conn
-    finally:
-        conn.close()
+Ejemplo de archivo SQL complejo:
 
-with get_db_connection() as connection:
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT NOW() AS hora_actual")
-    print(f"⏰ Hora del servidor: {cursor.fetchone()['hora_actual']}")
+```sql
+DELIMITER //
+CREATE PROCEDURE calcular_total(IN cliente_id INT)
+BEGIN
+    SELECT SUM(monto) AS total 
+    FROM pedidos 
+    WHERE cliente_id = cliente_id;
+END //
+DELIMITER ;
+
+-- Insertar datos iniciales
+INSERT INTO config (parametro, valor) VALUES ('version', '1.0');
 ```
-
-### 2. Resultados en Formato JSON
-```python
-import json
-
-def exportar_a_json(tabla: str, archivo: str):
-    datos = db.fetchall(f"SELECT * FROM {tabla}")
-    with open(archivo, 'w') as f:
-        json.dump(datos, f, indent=2)
-
-exportar_a_json("productos", "backup_productos.json")
-print("📤 Datos exportados a JSON")
-```
-
-## 🔄 Métodos Utilitarios
-- `switch_database(nombre)`: Cambia la base de datos activa (valida el nombre)
-- `get_current_database()`: Devuelve el nombre de la base de datos actual
-- `is_initialized()`: Indica si el pool fue inicializado
-- `get_instance()`: Devuelve la instancia singleton del pool
-- `run_sql_file(path)`: Ejecuta un archivo SQL
-- `run_multiple_sql_files(lista)`: Ejecuta varios archivos SQL
-- `run_multiple_sql_files_from_directory(dir, lista)`: Ejecuta varios archivos SQL desde un directorio
-
-## 📝 Notas Importantes
-1. Siempre usa parámetros para prevenir SQL injection:
-   ```python
-   # ❌ Mal
-   db.fetchall(f"SELECT * FROM usuarios WHERE id = {user_input}")
-   # ✅ Bien
-   db.fetchall("SELECT * FROM usuarios WHERE id = %s", (user_input,))
-   ```
-2. El método `switch_database` valida el nombre de la base de datos (solo letras, números y guiones bajos).
-3. Las conexiones obtenidas con `_get_connection()` DEBEN cerrarse manualmente.
-4. Para operaciones batch, usa un ciclo o `executemany` manualmente.
-5. Si usas `execute`, recuerda cerrar la conexión devuelta.
-6. Para ejecutar archivos SQL, usa los métodos `run_sql_file`, `run_multiple_sql_files` o `run_multiple_sql_files_from_directory`.
