@@ -388,7 +388,7 @@ class MySQLConnectionPool:
                 # Update connection params for new connections
                 MySQLConnectionPool._connection_params['database'] = database
         finally:
-            conn.close()
+            MySQLConnectionPool.safe_close_connection(conn)
 
     def _validate_db_name(self, name: str) -> bool:
         """Validate database name to prevent SQL injection"""
@@ -493,7 +493,7 @@ class MySQLConnectionPool:
                     error_msg=str(e),
                     execution_context="execute"
                 )
-            conn.close()  # Close on error since user can't handle it
+            MySQLConnectionPool.safe_close_connection(conn)
             raise e
             
         return cursor, conn
@@ -558,8 +558,8 @@ class MySQLConnectionPool:
                 )
             raise e
         finally:
-            conn.close()
-    
+            MySQLConnectionPool.safe_close_connection(conn)
+
     def fetchone(
         self,
         query: str,
@@ -620,8 +620,8 @@ class MySQLConnectionPool:
                 )
             raise e
         finally:
-            conn.close()
-    
+            MySQLConnectionPool.safe_close_connection(conn)
+
     def fetchall(
         self,
         query: str,
@@ -682,8 +682,8 @@ class MySQLConnectionPool:
                 )
             raise e
         finally:
-            conn.close()
-    
+            MySQLConnectionPool.safe_close_connection(conn)
+
     def commit_execute(
         self,
         query: str,
@@ -749,8 +749,8 @@ class MySQLConnectionPool:
                 )
             raise e
         finally:
-            conn.close()
-    
+            MySQLConnectionPool.safe_close_connection(conn)
+
     @staticmethod
     def lastrowid(cursor: mysql.connector.cursor.MySQLCursor) -> Optional[int]:
         """Return the ID of the last inserted row."""
@@ -788,7 +788,7 @@ class MySQLConnectionPool:
                 row_count = cursor.rowcount
                 return results, row_count
         finally:
-            conn.close()
+            MySQLConnectionPool.safe_close_connection(conn)
 
     @classmethod
     def is_initialized(cls) -> bool:
@@ -1021,3 +1021,15 @@ class MySQLConnectionPool:
     def commit_execute_logged(self, query: str, params: Optional[Union[Tuple, Dict]] = None, database: Optional[str] = None) -> Tuple[int, Optional[int]]:
         """Execute write query with commit and logging enabled."""
         return self.commit_execute(query, params, database, enable_logging=True)
+    
+    @staticmethod
+    def safe_close_connection(connection):
+        """
+        Safely close a MySQL connection, ignoring errors if already closed or unavailable.
+        Use this instead of connection.close() directly.
+        """
+        try:
+            if connection and hasattr(connection, "is_connected") and connection.is_connected():
+                connection.close()
+        except Exception:
+            pass  # Connection already closed or unavailable
